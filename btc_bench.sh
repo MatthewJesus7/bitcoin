@@ -23,22 +23,22 @@ BITCOIND="$BUILD_DIR/bin/bitcoind"
 BENCH_BIN="$BUILD_DIR/bin/bench_bitcoin"
 TEST_BIN="$BUILD_DIR/bin/test_bitcoin"
 
-if [[ ! -x "$BITCOIND" ]]; then
-  echo "✗ bitcoind não encontrado — rode ./btc_setup.sh primeiro"
-  exit 1
-fi
+for bin in "$BITCOIND" "$BENCH_BIN"; do
+  if [[ ! -x "$bin" ]]; then
+    echo "✗ $(basename "$bin") não encontrado — rode ./btc_setup.sh primeiro"
+    exit 1
+  fi
+done
 
-# Recompila só o que mudou (incremental)
 echo ""
-echo "▶ [1/4] BUILD INCREMENTAL"
-cmake --build "$BUILD_DIR" -j1 2>&1 | grep -E "^\[|error:|Linking" | \
-  awk '/^\[/{printf "\r  %s", $0; fflush()} /error:/{print "\n  ✗ "$0}'
-echo ""
-echo "   ✓ build ok"
+echo "▶ [0/3] BINÁRIOS"
+for f in "$BITCOIND" "$BENCH_BIN" "$TEST_BIN"; do
+  [[ -x "$f" ]] && printf "   ✓ %-30s %s\n" "$(basename "$f")" "$(du -h "$f" | cut -f1)"
+done
 
 # ── UNIT TESTS ───────────────────────────────────
 echo ""
-echo "▶ [2/4] UNIT TESTS"
+echo "▶ [1/3] UNIT TESTS"
 UNIT_LOG="$OUT/unit_tests.log"
 
 ctest --test-dir "$BUILD_DIR" \
@@ -50,7 +50,7 @@ echo "   → $UNIT_LOG"
 
 # ── MICRO-BENCHMARKS ─────────────────────────────
 echo ""
-echo "▶ [3/4] MICRO-BENCHMARKS"
+echo "▶ [2/3] MICRO-BENCHMARKS"
 
 if [[ ! -x "$BENCH_BIN" ]]; then
   echo "   ✗ bench_bitcoin não encontrado"
@@ -68,7 +68,7 @@ fi
 
 # ── REGTEST ──────────────────────────────────────
 echo ""
-echo "▶ [4/4] REGTEST (50 blocos)"
+echo "▶ [3/3] REGTEST (50 blocos)"
 
 CLI="$BUILD_DIR/bin/bitcoin-cli"
 DATADIR="/tmp/btc_bench_regtest_$$"
