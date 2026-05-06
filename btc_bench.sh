@@ -19,9 +19,9 @@ echo " commit: $(git rev-parse --short HEAD 2>/dev/null || echo 'n/a')"
 echo "════════════════════════════════════════════"
 
 # ── VERIFICA BUILD ───────────────────────────────
-BITCOIND="$BUILD_DIR/src/bitcoind"
-BENCH_BIN="$BUILD_DIR/src/bench/bench_bitcoin"
-TEST_BIN="$BUILD_DIR/src/test/test_bitcoin"
+BITCOIND="$BUILD_DIR/bin/bitcoind"
+BENCH_BIN="$BUILD_DIR/bin/bench_bitcoin"
+TEST_BIN="$BUILD_DIR/bin/test_bitcoin"
 
 if [[ ! -x "$BITCOIND" ]]; then
   echo "✗ bitcoind não encontrado — rode ./btc_setup.sh primeiro"
@@ -70,7 +70,7 @@ fi
 echo ""
 echo "▶ [4/4] REGTEST (50 blocos)"
 
-CLI="$BUILD_DIR/src/bitcoin-cli"
+CLI="$BUILD_DIR/bin/bitcoin-cli"
 DATADIR="/tmp/btc_bench_regtest_$$"
 
 cleanup() {
