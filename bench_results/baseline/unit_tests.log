@@ -1,13 +1,22 @@
 Internal ctest changing into directory: /home/matheus/Documents/github/otimizer/bitcoin/build
 Test project /home/matheus/Documents/github/otimizer/bitcoin/build
     Start 221: checkqueue_tests
-1/8 Test #221: checkqueue_tests .................   Passed   12.07 sec
+1/8 Test #221: checkqueue_tests .................   Passed   10.51 sec
     Start 223: coins_tests_base
-2/8 Test #223: coins_tests_base .................   Passed   14.69 sec
+2/8 Test #223: coins_tests_base .................   Passed    9.20 sec
     Start 224: coins_tests_dbbase
-3/8 Test #224: coins_tests_dbbase ...............   Passed   37.45 sec
+3/8 Test #224: coins_tests_dbbase ...............   Passed   36.44 sec
     Start 225: coins_tests
-4/8 Test #225: coins_tests ......................   Passed    8.14 sec
+4/8 Test #225: coins_tests ......................   Passed    5.13 sec
     Start 255: miniscript_tests
-5/8 Test #255: miniscript_tests .................   Passed   14.25 sec
+5/8 Test #255: miniscript_tests .................   Passed    3.98 sec
     Start 288: script_tests
+6/8 Test #288: script_tests .....................   Passed   15.29 sec
+    Start 315: txvalidation_tests
+7/8 Test #315: txvalidation_tests ...............   Passed    0.86 sec
+    Start 328: validation_tests
+8/8 Test #328: validation_tests .................   Passed    0.20 sec
+
+100% tests passed, 0 tests failed out of 8
+
+Total Test time (real) =  81.72 sec

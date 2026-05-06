@@ -1,0 +1,32 @@
+Warning, results might be unstable:
+* CPU frequency scaling enabled: CPU 0 between 800.0 and 1,500.0 MHz
+* CPU governor is 'schedutil' but should be 'performance'
+
+Recommendations
+* Use 'pyperf system tune' before benchmarking. See https://github.com/psf/pyperf
+
+|              ns/job |               job/s |    err% |     total | benchmark
+|--------------------:|--------------------:|--------:|----------:|:----------
+|              735.33 |        1,359,925.03 |   35.8% |      2.55 | :wavy_dash: `CCheckQueueSpeedPrevectorJob` (Unstable with ~90.8 iters. Increase `minEpochIterations` to e.g. 908)
+
+|               ns/op |                op/s |    err% |     total | benchmark
+|--------------------:|--------------------:|--------:|----------:|:----------
+|            2,002.81 |          499,297.87 |    4.2% |      2.49 | `CCoinsCaching`
+
+|            ns/block |             block/s |    err% |     total | benchmark
+|--------------------:|--------------------:|--------:|----------:|:----------
+|      613,680,639.00 |                1.63 |   14.2% |      7.29 | :wavy_dash: `ConnectBlockAllEcdsa` (Unstable with ~1.0 iters. Increase `minEpochIterations` to e.g. 10)
+|      375,272,100.00 |                2.66 |    2.2% |      4.48 | `ConnectBlockAllSchnorr`
+|      715,035,554.00 |                1.40 |   10.2% |      9.27 | :wavy_dash: `ConnectBlockMixedEcdsaSchnorr` (Unstable with ~1.0 iters. Increase `minEpochIterations` to e.g. 10)
+
+|               ns/op |                op/s |    err% |     total | benchmark
+|--------------------:|--------------------:|--------:|----------:|:----------
+|          558,454.05 |            1,790.66 |    2.9% |      3.01 | `SignTransactionECDSA`
+|          416,956.24 |            2,398.33 |    0.9% |      3.23 | `SignTransactionSchnorr`
+
+|           ns/script |            script/s |    err% |     total | benchmark
+|--------------------:|--------------------:|--------:|----------:|:----------
+|          135,906.24 |            7,358.01 |    0.7% |      3.31 | `VerifyScriptP2TR_KeyPath`
+|          242,922.47 |            4,116.54 |    0.8% |      3.22 | `VerifyScriptP2TR_ScriptPath`
+|          137,408.20 |            7,277.59 |    0.6% |      3.33 | `VerifyScriptP2WPKH`
+Created "/home/matheus/Documents/github/otimizer/bitcoin/bench_results/baseline/bench.csv"

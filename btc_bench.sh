@@ -55,7 +55,7 @@ echo "▶ [2/3] MICRO-BENCHMARKS"
 if [[ ! -x "$BENCH_BIN" ]]; then
   echo "   ✗ bench_bitcoin não encontrado"
 else
-  FILTERS="CoinsCaching|UTXOLookup|VerifyScript|CheckInputScripts|Schnorr|CheckQueue|ConnectBlock|Coins|Script"
+  FILTERS="ConnectBlockAllEcdsa|ConnectBlockAllSchnorr|ConnectBlockMixedEcdsaSchnorr|VerifyScriptP2TR_KeyPath|VerifyScriptP2TR_ScriptPath|VerifyScriptP2WPKH|CCoinsCaching|CCheckQueueSpeedPrevectorJob|SignTransactionECDSA|SignTransactionSchnorr"
 
   "$BENCH_BIN" \
     -filter="$FILTERS" \
@@ -72,7 +72,6 @@ echo "▶ [3/3] REGTEST (50 blocos)"
 
 CLI="$BUILD_DIR/bin/bitcoin-cli"
 DATADIR="/tmp/btc_bench_regtest_$$"
-REGTEST_ADDR="bcrt1qjl8uwezzlech723lpnyuza0h2cdkvxvh54v3ue"
 
 # limpa processo órfão de run anterior na mesma porta
 echo "   verificando porta 19445..."
@@ -129,20 +128,13 @@ echo "   ✓ bitcoind pronto"
 if "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 createwallet "bench" > /dev/null 2>&1; then
   echo "   ✓ wallet 'bench' criada"
   REGTEST_ADDR=$("$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 getnewaddress)
-  echo "   endereço gerado: $REGTEST_ADDR"
+  echo "   minerando 5000 blocos para $REGTEST_ADDR..."
+  "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 generatetoaddress 5000 "$REGTEST_ADDR" > /dev/null
 else
-  echo "   ℹ wallet support ausente — usando endereço fixo"
-  echo "   endereço fixo: $REGTEST_ADDR"
+  echo "   ℹ wallet support ausente — minerando via descriptor raw(51)"
+  "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 generatetodescriptor 5000 "raw(51)" > /dev/null
 fi
-
-echo "   minerando 50 blocos..."
-if ! "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 generatetoaddress 50 "$REGTEST_ADDR" > /dev/null; then
-  echo "   ✗ falha ao minerar blocos"
-  echo "   debug.log:"
-  cat "$DATADIR/regtest/debug.log" 2>/dev/null || echo "   (sem debug.log)"
-  exit 1
-fi
-echo "   ✓ 50 blocos minerados"
+echo "   ✓ 5000 blocos minerados"
 
 REGTEST_OUT="$OUT/regtest_bench.log"
 grep -E "Connect [0-9]+ transactions|Verify [0-9]+ txins|Sanity checks|Fork checks" \
