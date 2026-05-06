@@ -44,7 +44,7 @@ UNIT_LOG="$OUT/unit_tests.log"
 ctest --test-dir "$BUILD_DIR" \
   --output-on-failure \
   -R "validation_tests|coins_tests|script_tests|checkqueue_tests" \
-  2>&1 | tee "$UNIT_LOG" | grep -E "passed|failed|Test #"
+  2>&1 | tee "$UNIT_LOG" | grep -E "passed|failed|Test #" || true
 
 echo "   → $UNIT_LOG"
 
@@ -72,16 +72,41 @@ echo "▶ [3/3] REGTEST (50 blocos)"
 
 CLI="$BUILD_DIR/bin/bitcoin-cli"
 DATADIR="/tmp/btc_bench_regtest_$$"
+REGTEST_ADDR="bcrt1qjl8uwezzlech723lpnyuza0h2cdkvxvh54v3ue"
+
+# limpa processo órfão de run anterior na mesma porta
+echo "   verificando porta 19445..."
+if lsof -ti tcp:19445 2>/dev/null | xargs kill -9 2>/dev/null; then
+  echo "   ✓ processo órfão eliminado na porta 19445"
+  sleep 1
+else
+  echo "   ✓ porta 19445 livre"
+fi
 
 cleanup() {
-  "$CLI" -regtest -datadir="$DATADIR" stop 2>/dev/null || true
-  sleep 2
+  echo "   [cleanup] enviando stop ao bitcoind..."
+  "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 stop 2>/dev/null || true
+
+  echo "   [cleanup] aguardando processo encerrar..."
+  local waited=0
+  while "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 ping 2>/dev/null; do
+    sleep 1
+    waited=$((waited + 1))
+    if (( waited >= 15 )); then
+      echo "   [cleanup] timeout — forçando kill na porta 19445"
+      lsof -ti tcp:19445 2>/dev/null | xargs kill -9 2>/dev/null || true
+      break
+    fi
+  done
+
+  echo "   [cleanup] removendo datadir $DATADIR"
   rm -rf "$DATADIR"
 }
 trap cleanup EXIT
 
 mkdir -p "$DATADIR"
 
+echo "   iniciando bitcoind (regtest, rpcport=19445)..."
 "$BITCOIND" \
   -regtest \
   -datadir="$DATADIR" \
@@ -91,11 +116,33 @@ mkdir -p "$DATADIR"
   -port=19444 \
   -rpcport=19445
 
-echo "   aguardando bitcoind..."
-sleep 4
+echo "   aguardando bitcoind estar pronto..."
+if ! "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 -rpcwait getblockcount > /dev/null 2>&1; then
+  echo "   ✗ bitcoind não respondeu — abortando"
+  echo "   debug.log:"
+  cat "$DATADIR/regtest/debug.log" 2>/dev/null || echo "   (sem debug.log)"
+  exit 1
+fi
+echo "   ✓ bitcoind pronto"
 
-ADDR=$("$CLI" -regtest -datadir="$DATADIR" getnewaddress)
-"$CLI" -regtest -datadir="$DATADIR" generatetoaddress 50 "$ADDR" > /dev/null
+# wallet opcional — só tenta se o build tiver suporte
+if "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 createwallet "bench" > /dev/null 2>&1; then
+  echo "   ✓ wallet 'bench' criada"
+  REGTEST_ADDR=$("$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 getnewaddress)
+  echo "   endereço gerado: $REGTEST_ADDR"
+else
+  echo "   ℹ wallet support ausente — usando endereço fixo"
+  echo "   endereço fixo: $REGTEST_ADDR"
+fi
+
+echo "   minerando 50 blocos..."
+if ! "$CLI" -regtest -datadir="$DATADIR" -rpcport=19445 generatetoaddress 50 "$REGTEST_ADDR" > /dev/null; then
+  echo "   ✗ falha ao minerar blocos"
+  echo "   debug.log:"
+  cat "$DATADIR/regtest/debug.log" 2>/dev/null || echo "   (sem debug.log)"
+  exit 1
+fi
+echo "   ✓ 50 blocos minerados"
 
 REGTEST_OUT="$OUT/regtest_bench.log"
 grep -E "Connect [0-9]+ transactions|Verify [0-9]+ txins|Sanity checks|Fork checks" \

@@ -1,41 +1,13 @@
 Internal ctest changing into directory: /home/matheus/Documents/github/otimizer/bitcoin/build
 Test project /home/matheus/Documents/github/otimizer/bitcoin/build
     Start 221: checkqueue_tests
-1/8 Test #221: checkqueue_tests .................***Exception: Illegal  0.03 sec
-
+1/8 Test #221: checkqueue_tests .................   Passed   12.07 sec
     Start 223: coins_tests_base
-2/8 Test #223: coins_tests_base .................***Exception: Illegal  0.02 sec
-
+2/8 Test #223: coins_tests_base .................   Passed   14.69 sec
     Start 224: coins_tests_dbbase
-3/8 Test #224: coins_tests_dbbase ...............***Exception: Illegal  0.02 sec
-
+3/8 Test #224: coins_tests_dbbase ...............   Passed   37.45 sec
     Start 225: coins_tests
-4/8 Test #225: coins_tests ......................***Exception: Illegal  0.01 sec
-
+4/8 Test #225: coins_tests ......................   Passed    8.14 sec
     Start 255: miniscript_tests
-5/8 Test #255: miniscript_tests .................***Exception: Illegal  0.02 sec
-
+5/8 Test #255: miniscript_tests .................   Passed   14.25 sec
     Start 288: script_tests
-6/8 Test #288: script_tests .....................***Exception: Illegal  0.08 sec
-
-    Start 315: txvalidation_tests
-7/8 Test #315: txvalidation_tests ...............***Exception: Illegal  0.04 sec
-
-    Start 328: validation_tests
-8/8 Test #328: validation_tests .................***Exception: Illegal  0.06 sec
-
-
-0% tests passed, 8 tests failed out of 8
-
-Total Test time (real) =   0.77 sec
-
-The following tests FAILED:
-	221 - checkqueue_tests (ILLEGAL)
-	223 - coins_tests_base (ILLEGAL)
-	224 - coins_tests_dbbase (ILLEGAL)
-	225 - coins_tests (ILLEGAL)
-	255 - miniscript_tests (ILLEGAL)
-	288 - script_tests (ILLEGAL)
-	315 - txvalidation_tests (ILLEGAL)
-	328 - validation_tests (ILLEGAL)
-Errors while running CTest
