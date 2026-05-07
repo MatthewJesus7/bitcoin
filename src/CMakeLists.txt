@@ -273,6 +273,10 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   $<$<TARGET_EXISTS:bitcoin_wallet>:wallet/init.cpp>
   $<$<NOT:$<TARGET_EXISTS:bitcoin_wallet>>:dummywallet.cpp>
 )
+target_include_directories(bitcoin_node PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/secp256k1/include
+    ${CMAKE_SOURCE_DIR}/../blockchain_otimizer
+)
 target_link_libraries(bitcoin_node
   PRIVATE
     core_interface

@@ -7,16 +7,6 @@
 
 #include <validation.h>
 
-// δ-framework — otimização ConnectBlock
-#include "../../blockchain_otimizer/adapters/bitcoin/adapter_io.h"
-#include "../../blockchain_otimizer/adapters/bitcoin/adapter_batch.h"
-#include "../../blockchain_otimizer/adapters/bitcoin/adapter_flow.h"
-
-inline bool HasNonTaprootInputs(const CTransaction& tx) {
-    for (const auto& in : tx.vin) if (!in.is_taproot) return true;
-    return false;
-}
-
 #include <arith_uint256.h>
 #include <chain.h>
 #include <checkqueue.h>
@@ -2522,14 +2512,6 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     if (auto& queue = m_chainman.GetCheckQueue(); queue.HasThreads() && fScriptChecks) control.emplace(queue);
 
     std::vector<PrecomputedTransactionData> txsdata(block.vtx.size());
-    // ── δ-framework: 1/3 ───────────────────────────────────────────────────
-    auto delta_io_tasks = collect_outpoints(block);
-    prefetch_utxos(delta_io_tasks, view);
-
-    BatchAccumulator schnorr_batch;
-    std::vector<CTransaction> flat_txs;
-    flat_txs.reserve(block.vtx.size());
-    // ────────────────────────────────────────────────────────────────────────
 
     std::vector<int> prevheights;
     CAmount nFees = 0;
@@ -2574,9 +2556,6 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
                               "contains a non-BIP68-final transaction " + tx.GetHash().ToString());
                 break;
             }
-                // ── δ-framework: 2/3 ───────────────────────────────────────────
-                flat_txs.push_back(tx);
-                // ────────────────────────────────────────────────────────────────
         }
 
         // GetTransactionSigOpCost counts 3 types of sigops:
@@ -2636,13 +2615,6 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
             state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, strprintf("block-script-verify-flag-failed (%s)", ScriptErrorString(parallel_result->first)), parallel_result->second);
         }
     }
-    // ── δ-framework: 3/3 ───────────────────────────────────────────────────
-    collect_batch(flat_txs, schnorr_batch);
-    if (!flush_batch(schnorr_batch, state)) {
-        LogError("%s: δ²⁰ batch_verify_schnorr falhou\n", __func__);
-        return false;
-    }
-    // ────────────────────────────────────────────────────────────────────────
     if (!state.IsValid()) {
         LogInfo("Block validation error: %s", state.ToString());
         return false;
