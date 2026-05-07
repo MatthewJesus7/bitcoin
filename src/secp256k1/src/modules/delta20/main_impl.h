@@ -2,10 +2,8 @@
  * δ²⁰ — Batch Schnorr via ecmult_multi_var (Pippenger)
  *
  * AXIOMA: loop de préprocessamento = aritmética escalar pura, zero EC.
- *   secp256k1_ge_set_xo_var (sqrt de campo, ~286 field ops) ocorre
- *   DENTRO do callback — chamado pelo Pippenger, não antes dele.
- *
- * cbdata armazena secp256k1_fe (32 B, x-only), não secp256k1_ge (64 B).
+ *   secp256k1_ge_set_xo_var ocorre DENTRO do callback — não antes.
+ *   cbdata armazena secp256k1_fe (32 B, x-only), não secp256k1_ge (64 B).
  */
 
 #ifndef SECP256K1_MODULE_DELTA20_MAIN_H
@@ -14,13 +12,12 @@
 #include "../../../include/secp256k1_delta20_batch.h"
 
 typedef struct {
-    const secp256k1_scalar* a;   /* blinding scalars [m]    */
-    const secp256k1_fe*     rx;  /* x-coords de R [m]       */
-    const secp256k1_scalar* ae;  /* a[i]·e[i] [m]           */
-    const secp256k1_fe*     px;  /* x-coords de P [m]       */
+    const secp256k1_scalar* a;
+    const secp256k1_fe*     rx;
+    const secp256k1_scalar* ae;
+    const secp256k1_fe*     px;
 } delta20_cbdata;
 
-/* Lift de ponto aqui — dentro do Pippenger, não no préprocessamento. */
 static int delta20_ecmult_cb(secp256k1_scalar* sc, secp256k1_ge* pt,
                               size_t idx, void* data)
 {
@@ -30,15 +27,22 @@ static int delta20_ecmult_cb(secp256k1_scalar* sc, secp256k1_ge* pt,
     else            { *sc = d->ae[k]; return secp256k1_ge_set_xo_var(pt, &d->px[k], 0); }
 }
 
-/* e = H_tagged("BIP0340/challenge", R_x || P_x || msg) */
-static void delta20_challenge(secp256k1_scalar* e,
+/*
+ * e = H_tagged("BIP0340/challenge", R_x || P_x || msg)
+ *
+ * ctx passado explicitamente para secp256k1_sha256_initialize_tagged,
+ * que nesta versão do secp256k1 recebe hash_ctx como primeiro argumento:
+ *   secp256k1_sha256_initialize_tagged(&ctx->hash_ctx, &sha, tag, taglen)
+ */
+static void delta20_challenge(const secp256k1_context* ctx,
+                               secp256k1_scalar* e,
                                const unsigned char* r32,
                                const unsigned char* p32,
                                const unsigned char* msg, size_t msglen)
 {
     unsigned char buf[32];
     secp256k1_sha256 sha;
-    secp256k1_sha256_initialize_tagged(&sha,
+    secp256k1_sha256_initialize_tagged(&ctx->hash_ctx, &sha,
         (const unsigned char*)"BIP0340/challenge",
         sizeof("BIP0340/challenge") - 1);
     secp256k1_sha256_write(&sha, r32, 32);
@@ -78,21 +82,17 @@ int secp256k1_delta20_batch_verify(
         secp256k1_rfc6979_hmac_sha256_initialize(&rng, blind_seed, 32);
         secp256k1_scalar_set_int(&inp_g_sc, 0);
 
-        /*
-         * LOOP: aritmética escalar e hash apenas.
-         * Proibido: secp256k1_ge_set_xo_var / set_xquad / fe_sqrt.
-         */
         for (i = 0; i < m; i++) {
             secp256k1_scalar s, e, as;
             int overflow;
             unsigned char rand32[32];
 
-            if (!secp256k1_fe_set_b32_limit(&rx[i], sigs[i]))     goto cleanup_rng;
+            if (!secp256k1_fe_set_b32_limit(&rx[i], sigs[i]))    goto cleanup_rng;
             secp256k1_scalar_set_b32(&s, sigs[i] + 32, &overflow);
             if (overflow) goto cleanup_rng;
-            if (!secp256k1_fe_set_b32_limit(&px[i], pubkeys[i]))  goto cleanup_rng;
+            if (!secp256k1_fe_set_b32_limit(&px[i], pubkeys[i])) goto cleanup_rng;
 
-            delta20_challenge(&e, sigs[i], pubkeys[i], msgs[i], msglen);
+            delta20_challenge(ctx, &e, sigs[i], pubkeys[i], msgs[i], msglen);
 
             secp256k1_rfc6979_hmac_sha256_generate(&rng, rand32, 32);
             secp256k1_scalar_set_b32(&a[i], rand32, NULL);
@@ -106,13 +106,12 @@ int secp256k1_delta20_batch_verify(
             secp256k1_scalar_clear(&as);
         }
 
-        memset(&rng, 0, sizeof(rng));  /* blind_seed residue */
+        memset(&rng, 0, sizeof(rng));
 
-        /* ── Única chamada EC ─────────────────────────────────────────── */
         {
-            const int    bw  = secp256k1_pippenger_bucket_window(2 * m);
-            const size_t sz  = secp256k1_pippenger_scratch_size(2 * m, bw)
-                             + PIPPENGER_SCRATCH_OBJECTS * ALIGNMENT;
+            const int    bw = secp256k1_pippenger_bucket_window(2 * m);
+            const size_t sz = secp256k1_pippenger_scratch_size(2 * m, bw)
+                            + PIPPENGER_SCRATCH_OBJECTS * ALIGNMENT;
             secp256k1_scratch* scratch = secp256k1_scratch_create(&ctx->error_callback, sz);
             if (!scratch) { secp256k1_scalar_clear(&inp_g_sc); goto cleanup; }
 
