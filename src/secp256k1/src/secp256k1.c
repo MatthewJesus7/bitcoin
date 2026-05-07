@@ -845,6 +845,9 @@ int secp256k1_tagged_sha256(const secp256k1_context* ctx, unsigned char *hash32,
 # include "modules/schnorrsig/main_impl.h"
 #endif
 
+/* δ²⁰ — batch Schnorr via ecmult_multi_var */
+#include "modules/delta20/main_impl.h"
+
 #ifdef ENABLE_MODULE_MUSIG
 # include "modules/musig/main_impl.h"
 #endif
