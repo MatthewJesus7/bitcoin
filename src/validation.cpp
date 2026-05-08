@@ -13,7 +13,13 @@
 #include "../../blockchain_otimizer/adapters/bitcoin/adapter_flow.h"
 
 inline bool HasNonTaprootInputs(const CTransaction& tx) {
-    for (const auto& in : tx.vin) if (!in.is_taproot) return true;
+    for (const auto& in : tx.vin) {
+        // CTxIn nao tem is_taproot — detecta via witness (key-path taproot)
+        const auto& ws = in.scriptWitness.stack;
+        const bool is_taproot = in.scriptSig.empty() && ws.size() == 1 &&
+                                (ws[0].size() == 64 || ws[0].size() == 65);
+        if (!is_taproot) return true;
+    }
     return false;
 }
 
@@ -2527,7 +2533,8 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
     prefetch_utxos(delta_io_tasks, view);
 
     BatchAccumulator schnorr_batch;
-    std::vector<CTransaction> flat_txs;
+    // par<CTransaction, vtx_index> para correlacionar com txsdata
+    std::vector<std::pair<CTransaction, size_t>> flat_txs;
     flat_txs.reserve(block.vtx.size());
     // ────────────────────────────────────────────────────────────────────────
 
@@ -2575,7 +2582,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
                 break;
             }
                 // ── δ-framework: 2/3 ───────────────────────────────────────────
-                flat_txs.push_back(tx);
+                flat_txs.emplace_back(tx, i);  // i = indice vtx para txsdata
                 // ────────────────────────────────────────────────────────────────
         }
 
@@ -2637,7 +2644,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         }
     }
     // ── δ-framework: 3/3 ───────────────────────────────────────────────────
-    collect_batch(flat_txs, schnorr_batch);
+    collect_batch_bitcoin(flat_txs, txsdata, schnorr_batch);
     if (!flush_batch(schnorr_batch, state)) {
         LogError("%s: δ²⁰ batch_verify_schnorr falhou\n", __func__);
         return false;
